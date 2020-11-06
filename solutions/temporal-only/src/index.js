@@ -34,41 +34,41 @@ form.addEventListener("submit", (evt) => {
 });
 
 const renderTable = () => {
-  // Display local time zone and three others
-  const here = Temporal.now.timeZone();
-  const now = Temporal.now.absolute();
-
   // Start the table at midnight local time
-  const calendarNow = now.toDateTime(here);
-  const startTime = calendarNow
-    .with(Temporal.Time.from("00:00")) // midnight
-    .toAbsolute(here);
+  const startTime = Temporal.now.zonedDateTimeISO().startOfDay();
 
   // Build the table
   timeZones.forEach(({ name, tz }) => {
+    const inTz = startTime.withTimeZone(tz);
     const row = document.createElement("tr");
 
     const title = document.createElement("td");
-    title.textContent = `${name} (UTC${tz.getOffsetStringFor(now)})`;
+    title.textContent = `${tz.id} (UTC${inTz.offset})`;
     row.appendChild(title);
 
     for (let hours = 0; hours < 24; hours++) {
       const cell = document.createElement("td");
 
-      const dt = startTime.plus({ hours }).toDateTime(tz);
-      cell.className = `time-${dt.hour}`;
+      const zdt = inTz.add({ hours });
+      cell.className = `time-${zdt.hour}`;
 
       // Highlight the current hour in each row
-      if (hours === calendarNow.hour) cell.className += " time-current";
+      if (hours === inTz.hour) cell.className += " time-current";
 
-      // Show the date in midnight cells
-      let formatOptions;
-      if (dt.hour === 0) {
-        formatOptions = { month: "short", day: "numeric" };
-      } else {
-        formatOptions = { hour: "numeric" };
-      }
-      cell.textContent = dt.toLocaleString(undefined, formatOptions);
+      /* 
+        // Uncomment code below after the `toLocaleString` polyfill bug is fixed
+
+        // Show the date in midnight cells
+        let formatOptions;
+        if (dt.hour === 0) {
+          formatOptions = { month: "short", day: "numeric" };
+        } else {
+          formatOptions = { hour: "numeric" };
+        }
+        cell.textContent = inTz.toLocaleString(undefined, formatOptions);
+      */
+      cell.textContent = zdt.hour.toString();
+      
       row.appendChild(cell);
     }
 
@@ -76,27 +76,23 @@ const renderTable = () => {
   });
 };
 
-const getPreferredTimes = () => {
   // Display local time zone and three others
-  const here = Temporal.now.timeZone();
-  const now = Temporal.now.absolute();
-
-  // Start the table at midnight local time
-  const calendarNow = now.toDateTime(here);
-  const startTime = calendarNow
-    .with(Temporal.Time.from("00:00")) // midnight
-    .toAbsolute(here);
-
+const getPreferredTimes = () => {
   // Start with an array representing each hour of the day
   const referenceHours = new Array(24).fill(0);
 
+  // Start the table at midnight local time
+  const startTime = Temporal.now.zonedDateTimeISO().startOfDay();
+
   timeZones.forEach(({ tz }) => {
+    const inTz = startTime.withTimeZone(tz);
     for (let hours = 0; hours < 24; hours++) {
-      const dt = startTime.plus({ hours }).toDateTime(tz);
+      const zdt = inTz.add({ hours });
       // Set null all the hours this timezone cannot do
-      referenceHours[hours] = referenceHours[hours] += getHourScore(dt);
+      referenceHours[hours] = referenceHours[hours] += getHourScore(zdt);
     }
   });
+
   const result = referenceHours.reduce(
     (acc, v, i) => {
       if (v > acc.score) {
