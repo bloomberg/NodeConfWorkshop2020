@@ -16,7 +16,7 @@
 import { Temporal } from "proposal-temporal";
 import { Record, Tuple, Box } from "@bloomberg/record-tuple-polyfill";
 
-const now = Temporal.now.absolute()
+const now = Temporal.now.instant()
 const oneTwoThreeNow = #[1, 2, 3, Box(now)];
 
 console.log(oneTwoThreeNow.slice(0, 3));
